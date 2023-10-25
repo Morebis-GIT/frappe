@@ -357,7 +357,8 @@ frappe.provide("frappe.views");
 			bind_add_column();
 			bind_clickdrag();
 		}
-
+		
+		// add delay 1sec
 		function setup_sortable() {
 			// If no write access to board, editing board (by dragging column) should be blocked
 			if (!self.board_perms.write) return;
@@ -367,6 +368,7 @@ frappe.provide("frappe.views");
 				animation: 150,
 				dataIdAttr: "data-column-value",
 				filter: ".add-new-column",
+				delay: 1000,
 				handle: ".kanban-column-title",
 				onEnd: function () {
 					var order = sortable.toArray();

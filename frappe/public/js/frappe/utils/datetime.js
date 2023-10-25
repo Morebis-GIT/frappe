@@ -192,10 +192,11 @@ $.extend(frappe.datetime, {
 
 	global_date_format: function (d) {
 		var m = moment(d);
+		console.log(frappe.sys_defaults && frappe.sys_defaults.date_format) //mm-dd-yyyy convert to MMMM Do YYYY
 		if (m._f && m._f.indexOf("HH") !== -1) {
-			return m.format("Do MMMM YYYY, hh:mm A");
+			return m.format("MMMM Do YYYY, hh:mm A");
 		} else {
-			return m.format("Do MMMM YYYY");
+			return m.format("MMMM Do YYYY");
 		}
 	},
 

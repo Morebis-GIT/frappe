@@ -10,7 +10,7 @@ from croniter import croniter
 import frappe
 from frappe.model.document import Document
 from frappe.utils import get_datetime, now_datetime
-from frappe.utils.background_jobs import enqueue, is_job_enqueued
+from frappe.utils.background_jobs import enqueue, get_jobs
 
 
 class ScheduledJobType(Document):
@@ -36,13 +36,9 @@ class ScheduledJobType(Document):
 						"frappe.core.doctype.scheduled_job_type.scheduled_job_type.run_scheduled_job",
 						queue=self.get_queue_name(),
 						job_type=self.method,
-						job_id=self.rq_job_id,
 					)
 					return True
-				else:
-					frappe.logger("scheduler").error(
-						f"Skipped queueing {self.method} because it was found in queue for {frappe.local.site}"
-					)
+
 		return False
 
 	def is_event_due(self, current_time=None):
@@ -50,13 +46,9 @@ class ScheduledJobType(Document):
 		# if the next scheduled event is before NOW, then its due!
 		return self.get_next_execution() <= (current_time or now_datetime())
 
-	def is_job_in_queue(self) -> bool:
-		return is_job_enqueued(self.rq_job_id)
-
-	@property
-	def rq_job_id(self):
-		"""Unique ID created to deduplicate jobs with single RQ call."""
-		return f"scheduled_job::{self.method}"
+	def is_job_in_queue(self):
+		queued_jobs = get_jobs(site=frappe.local.site, key="job_type")[frappe.local.site]
+		return self.method in queued_jobs
 
 	@property
 	def next_execution(self):
@@ -64,14 +56,14 @@ class ScheduledJobType(Document):
 
 	def get_next_execution(self):
 		CRON_MAP = {
-			"Yearly": "0 0 1 1 *",
-			"Annual": "0 0 1 1 *",
-			"Monthly": "0 0 1 * *",
-			"Monthly Long": "0 0 1 * *",
-			"Weekly": "0 0 * * 0",
-			"Weekly Long": "0 0 * * 0",
-			"Daily": "0 0 * * *",
-			"Daily Long": "0 0 * * *",
+			"Yearly": "30 8 1 1 *",
+			"Annual": "30 8 1 1 *",
+			"Monthly": "30 8 1 * *",
+			"Monthly Long": "30 8 1 * *",
+			"Weekly": "30 8 * * 0",
+			"Weekly Long": "30 8 * * 0",
+			"Daily": "30 8 * * *",
+			"Daily Long": "30 8 * * *",
 			"Hourly": "0 * * * *",
 			"Hourly Long": "0 * * * *",
 			"All": "0/" + str((frappe.get_conf().scheduler_interval or 240) // 60) + " * * * *",
@@ -80,12 +72,9 @@ class ScheduledJobType(Document):
 		if not self.cron_format:
 			self.cron_format = CRON_MAP[self.frequency]
 
-		# If this is a cold start then last_execution will not be set.
-		# Creation is set as fallback because if very old fallback is set job might trigger
-		# immediately, even when it's meant to be daily.
-		# A dynamic fallback like current time might miss the scheduler interval and job will never start.
-		last_execution = get_datetime(self.last_execution or self.creation)
-		return croniter(self.cron_format, last_execution).get_next(datetime)
+		return croniter(
+			self.cron_format, get_datetime(self.last_execution or datetime(2000, 1, 1))
+		).get_next(datetime)
 
 	def execute(self):
 		self.scheduler_log = None

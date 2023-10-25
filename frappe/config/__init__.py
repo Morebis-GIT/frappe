@@ -6,6 +6,26 @@ from frappe.desk.moduleview import (
 	get_module_link_items_from_list,
 	get_onboard_items,
 )
+#add new function for integration Gpt
+@frappe.whitelist()
+def get_var_request(type,data,industries=[]):
+	import requests
+	import json
+	url = frappe.db.get_value('Request Key', 'e1005bc306', 'endpoint_url')
+	key = frappe.db.get_value('Request Key', 'e1005bc306', 'request_key')
+	payload = {
+		"sender": "test_user",
+		"message": data,
+		"template": type,
+		"type": "gpt",
+		"key": key,
+		"industries": industries
+	}
+	headers = {"Content-Type": "application/json"}
+
+	response = requests.request("POST", url, json=payload, headers=headers)
+	print(response.text)
+	return json.loads(response.text)
 
 
 def get_modules_from_all_apps_for_user(user=None):

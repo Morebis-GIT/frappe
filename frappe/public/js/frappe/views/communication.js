@@ -45,7 +45,7 @@ frappe.views.CommunicationComposer = class {
 			$(document).trigger("form-typing", [this.frm]);
 		}
 	}
-
+//add new fields for integration
 	get_fields() {
 		const fields = [
 			{
@@ -56,7 +56,7 @@ frappe.views.CommunicationComposer = class {
 			},
 			{
 				fieldtype: "Button",
-				label: frappe.utils.icon("down", "xs"),
+				label: frappe.utils.icon("down"),
 				fieldname: "option_toggle_button",
 				click: () => {
 					this.toggle_more_options();
@@ -78,20 +78,10 @@ frappe.views.CommunicationComposer = class {
 				fieldname: "bcc",
 			},
 			{
-				fieldtype: "Section Break",
-				fieldname: "email_template_section_break",
-				hidden: 1,
-			},
-			{
 				label: __("Email Template"),
 				fieldtype: "Link",
 				options: "Email Template",
 				fieldname: "email_template",
-			},
-			{
-				fieldtype: "HTML",
-				label: __("Clear & Add template"),
-				fieldname: "clear_and_add_template",
 			},
 			{ fieldtype: "Section Break" },
 			{
@@ -116,6 +106,45 @@ frappe.views.CommunicationComposer = class {
 					let sender_email = this.dialog.get_value("sender") || "";
 					this.content_set = false;
 					await this.set_content(sender_email);
+				},
+			},
+			{
+				fieldtype: "Section Break",
+				label: "Gpt helper",
+			},
+			{
+				label: __("Additional prompt"),
+				fieldtype: "Data",
+				fieldname: "prompt",
+				length: 100,
+				default:"Write in more informal style"
+			},
+			{
+				fieldtype: "Button",
+				label: frappe.utils.icon("down"),
+				fieldname: "gpt_toggle_button",
+				click: () => {
+					this.toggle_gpt_section();
+				},
+			},
+			{
+				fieldtype: "Section Break",
+				hidden: 1,
+				fieldname: "gpt_section",
+			},
+			{
+				label: __("Message"),
+				fieldtype: "Text Editor",
+				fieldname: "gpt_content",
+				onchange: frappe.utils.debounce(this.save_as_draft.bind(this), 300),
+			},
+			{
+				fieldtype: "Button",
+				label: __("Gpt Rephrase"),
+				fieldname: "gpt_rephrase",
+				click: async () => {
+					this.content_set = false;
+					await this.set_phrase();
 				},
 			},
 			{ fieldtype: "Section Break" },
@@ -185,10 +214,16 @@ frappe.views.CommunicationComposer = class {
 	toggle_more_options(show_options) {
 		show_options = show_options || this.dialog.fields_dict.more_options.df.hidden;
 		this.dialog.set_df_property("more_options", "hidden", !show_options);
-		this.dialog.set_df_property("email_template_section_break", "hidden", !show_options);
 
-		const label = frappe.utils.icon(show_options ? "up-line" : "down", "xs");
+		const label = frappe.utils.icon(show_options ? "up-line" : "down");
 		this.dialog.get_field("option_toggle_button").set_label(label);
+	}
+	toggle_gpt_section(show_options) {
+		show_options = show_options || this.dialog.fields_dict.gpt_section.df.hidden;
+		this.dialog.set_df_property("gpt_section", "hidden", !show_options);
+
+		const label = frappe.utils.icon(show_options ? "up-line" : "down");
+		this.dialog.get_field("gpt_toggle_button").set_label(label);
 	}
 
 	prepare() {
@@ -283,14 +318,13 @@ frappe.views.CommunicationComposer = class {
 	setup_email_template() {
 		const me = this;
 
-		const fields = this.dialog.fields_dict;
-		const clear_and_add_template = $(fields.clear_and_add_template.wrapper);
-
-		function add_template() {
+		this.dialog.fields_dict["email_template"].df.onchange = () => {
 			const email_template = me.dialog.fields_dict.email_template.get_value();
 			if (!email_template) return;
 
 			function prepend_reply(reply) {
+				if (me.reply_added === email_template) return;
+
 				const content_field = me.dialog.fields_dict.content;
 				const subject_field = me.dialog.fields_dict.subject;
 
@@ -298,6 +332,8 @@ frappe.views.CommunicationComposer = class {
 
 				content_field.set_value(`${reply.message}<br>${content}`);
 				subject_field.set_value(reply.subject);
+
+				me.reply_added = email_template;
 			}
 
 			frappe.call({
@@ -311,25 +347,7 @@ frappe.views.CommunicationComposer = class {
 					prepend_reply(r.message);
 				},
 			});
-		}
-
-		let email_template_actions = [
-			{
-				label: __("Add Template"),
-				description: __("Prepend the template to the email message"),
-				action: () => add_template(),
-			},
-			{
-				label: __("Clear & Add Template"),
-				description: __("Clear the email message and add the template"),
-				action: () => {
-					me.dialog.fields_dict.content.set_value("");
-					add_template();
-				},
-			},
-		];
-
-		frappe.utils.add_select_group_button(clear_and_add_template, email_template_actions);
+		};
 	}
 
 	setup_last_edited_communication() {
@@ -374,7 +392,7 @@ frappe.views.CommunicationComposer = class {
 			await this.dialog.set_value(fieldname, this[fieldname] || "");
 		}
 
-		const subject = this.subject ? frappe.utils.html2text(this.subject) : "";
+		const subject = frappe.utils.html2text(this.subject) || "";
 		await this.dialog.set_value("subject", subject);
 
 		await this.set_values_from_last_edited_communication();
@@ -386,6 +404,7 @@ frappe.views.CommunicationComposer = class {
 			await this.dialog.set_value("email_template", email_template);
 		}
 
+		
 		for (const fieldname of ["email_template", "cc", "bcc"]) {
 			if (this.dialog.get_value(fieldname)) {
 				this.toggle_more_options(true);
@@ -764,6 +783,27 @@ frappe.views.CommunicationComposer = class {
 				: 0;
 		}
 	}
+	async set_phrase() {
+
+		const text = this.dialog.get_value("content").replaceAll("<br>","").replaceAll("<p>","").replaceAll("</p>","")
+		if(text.length  > 520)
+		{
+			const cont =  this.dialog.get_value("content") + "\n" + this.dialog.get_value("prompt")||"";
+			let data;
+			await frappe.call({
+				method: "frappe.config.get_var_request",
+				args: {
+					data: cont,
+					type: "email"
+				},
+				callback: function(r) {
+					data = r
+				},
+			});
+			this.dialog.set_value("gpt_content", data.message.content || "");
+		}else frappe.throw(__("Too short message for rephrase"));
+		
+	}
 
 	async set_content(sender_email) {
 		if (this.content_set) return;
@@ -778,10 +818,7 @@ frappe.views.CommunicationComposer = class {
 			this.content_set = true;
 		}
 
-		const signature = await this.get_signature(sender_email || "");
-		if (!this.content_set || !strip_html(message).includes(strip_html(signature))) {
-			message += signature;
-		}
+		message += await this.get_signature(sender_email || null);
 
 		if (this.is_a_reply && !this.reply_set) {
 			message += this.get_earlier_reply();
