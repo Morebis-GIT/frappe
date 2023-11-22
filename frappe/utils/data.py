@@ -1594,6 +1594,8 @@ def get_url(uri: str | None = None, full_address: bool = False) -> str:
 	host_name = frappe.local.conf.host_name or frappe.local.conf.hostname
 
 	if uri and (uri.startswith("http://") or uri.startswith("https://")):
+		if uri.startswith("http://"):
+			uri = uri.replace("http://","https://")
 		return uri
 
 	if not host_name:
@@ -1641,7 +1643,10 @@ def get_url(uri: str | None = None, full_address: bool = False) -> str:
 	):
 		host_name = host_name + ":" + str(port)
 
+	host_name = frappe.conf.get("erp_host_name") if host_name.startswith("http://") else host_name
+
 	url = urljoin(host_name, uri) if uri else host_name
+	print('current host_name = ', host_name)
 
 	return url
 
