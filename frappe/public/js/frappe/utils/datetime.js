@@ -197,9 +197,13 @@ $.extend(frappe.datetime, {
 	global_date_format: function (d) {
 		var m = moment(d);
 		if (m._f && m._f.indexOf("HH") !== -1) {
-			return m.format("Do MMMM YYYY, hh:mm A");
+			// Devtorium changes start
+			return m.format("MMMM Do YYYY, hh:mm A");
+			// Devtorium changes end
 		} else {
-			return m.format("Do MMMM YYYY");
+			// Devtorium changes start
+			return m.format("MMMM Do YYYY");
+			// Devtorium changes end
 		}
 	},
 

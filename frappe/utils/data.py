@@ -1548,6 +1548,10 @@ def get_url(uri: str | None = None, full_address: bool = False) -> str:
 	host_name = frappe.local.conf.host_name or frappe.local.conf.hostname
 
 	if uri and (uri.startswith("http://") or uri.startswith("https://")):
+		# Devtorium changes start
+		if uri.startswith("http://"):
+			uri = uri.replace("http://","https://")
+		# Devtorium changes end
 		return uri
 
 	if not host_name:
@@ -1594,7 +1598,9 @@ def get_url(uri: str | None = None, full_address: bool = False) -> str:
 		and port
 	):
 		host_name = host_name + ":" + str(port)
-
+	# Devtorium changes start
+	host_name = frappe.conf.get("erp_host_name") if host_name.startswith("http://") else host_name
+	# Devtorium changes end
 	return urljoin(host_name, uri) if uri else host_name
 
 

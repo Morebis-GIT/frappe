@@ -12,7 +12,12 @@
 	--kanban-new-card-bg: var(--gray-700);
 	--kanban-new-card-hover-bg: var(--gray-800);
 }
+// Devtorium changes start
+.kanban-card-title {
 
+	padding-top: 10px;
+}
+// Devtorium changes end
 .kanban {
 	display: flex;
 	overflow-y: hidden;
