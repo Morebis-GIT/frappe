@@ -87,6 +87,7 @@ class DocField(Document):
 		is_virtual: DF.Check
 		label: DF.Data | None
 		length: DF.Int
+		link_filters: DF.JSON | None
 		mandatory_depends_on: DF.Code | None
 		max_height: DF.Data | None
 		no_copy: DF.Check
@@ -115,6 +116,7 @@ class DocField(Document):
 		unique: DF.Check
 		width: DF.Data | None
 	# end: auto-generated types
+
 	def get_link_doctype(self):
 		"""Returns the Link doctype for the docfield (if applicable)
 		if fieldtype is Link: Returns "options"
