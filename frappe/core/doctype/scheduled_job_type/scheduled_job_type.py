@@ -88,20 +88,21 @@ class ScheduledJobType(Document):
 		return self.get_next_execution()
 
 	def get_next_execution(self):
+		# Devtorium changes start change time for email sending
 		CRON_MAP = {
-			"Yearly": "0 0 1 1 *",
-			"Annual": "0 0 1 1 *",
-			"Monthly": "0 0 1 * *",
-			"Monthly Long": "0 0 1 * *",
-			"Weekly": "0 0 * * 0",
-			"Weekly Long": "0 0 * * 0",
-			"Daily": "0 0 * * *",
-			"Daily Long": "0 0 * * *",
+			"Yearly": "30 8 1 1 *",
+			"Annual": "30 8 1 1 *",
+			"Monthly": "30 8 1 * *",
+			"Monthly Long": "30 8 1 * *",
+			"Weekly": "30 8 * * 0",
+			"Weekly Long": "30 8 * * 0",
+			"Daily": "30 8 * * *",
+			"Daily Long": "30 8 * * *",
 			"Hourly": "0 * * * *",
 			"Hourly Long": "0 * * * *",
-			"All": f"*/{(frappe.get_conf().scheduler_interval or 240) // 60} * * * *",
+			"All": "0/" + str((frappe.get_conf().scheduler_interval or 240) // 60) + " * * * *",
 		}
-
+		# Devtorium changes end change time for email sending
 		if not self.cron_format:
 			self.cron_format = CRON_MAP[self.frequency]
 

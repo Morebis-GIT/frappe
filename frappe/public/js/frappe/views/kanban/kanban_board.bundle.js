@@ -367,6 +367,9 @@ frappe.provide("frappe.views");
 				animation: 150,
 				dataIdAttr: "data-column-value",
 				filter: ".add-new-column",
+				// Devtorium changes start
+				delay: 1000,
+				// Devtorium changes end
 				handle: ".kanban-column-title",
 				onEnd: function () {
 					var order = sortable.toArray();
